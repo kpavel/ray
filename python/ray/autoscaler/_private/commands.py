@@ -723,7 +723,7 @@ def get_or_create_head_node(config: Dict[str, Any],
         updater.join()
 
         # Refresh the node cache so we see the external ip if available
-        provider.non_terminated_nodes(head_node_tags)
+        provider.non_terminated_nodes({})
 
         if updater.exitcode != 0:
             # todo: this does not follow the mockup and is not good enough
