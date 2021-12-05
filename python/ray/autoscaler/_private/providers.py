@@ -94,6 +94,10 @@ def _import_aliyun(provider_config):
 
     return AliyunNodeProvider
 
+def _import_aliyun(provider_config):
+    from ray.autoscaler._private.gen2.node_provider import \
+        Gen2NodeProvider
+    return Gen2NodeProvider
 
 def _load_fake_multinode_docker_defaults_config():
     import ray.autoscaler._private.fake_multi_node as ray_fake_multinode
