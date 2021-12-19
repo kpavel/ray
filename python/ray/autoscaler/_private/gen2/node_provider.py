@@ -517,7 +517,7 @@ class Gen2NodeProvider(NodeProvider):
 
         # currently create and tag is not an atomic operation
         with self.lock:
-            self.pending_nodes[instance["id"]] = instance
+            self.pending_nodes[instance["id"]] = time.time()
         
         tags[TAG_RAY_CLUSTER_NAME] = self.cluster_name
         tags[TAG_RAY_NODE_NAME] = name
