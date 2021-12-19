@@ -44,11 +44,6 @@ PROFILE_NAME_DEFAULT = "cx2-2x4"
 VOLUME_TIER_NAME_DEFAULT = "general-purpose"
 RAY_RECYCLABLE = "ray-recyclable"
 
-ALL_STATUS_TAGS = [
-    "ray-node-status:uninitialized", "ray-node-status:waiting-for-ssh",
-    "ray-node-status:setting-up", "ray-node-status:syncing-files",
-    "ray-node-status:up-to-date", "ray-node-status:update-failed"
-]
 RETRIES = 10
 WORKER = "worker"
 HEAD = "head"
@@ -143,7 +138,10 @@ class Gen2NodeProvider(NodeProvider):
     """
     def _load_tags(self):
         self.nodes_tags = {}
-        tags_file = Path('tags.json')
+        ray_cache = Path(Path.home(), Path('.ray'))
+        ray_cache.mkdir(exist_ok=True)
+
+        tags_file = Path(ray_cache, Path('tags.json'))
         if tags_file.is_file():
             with open('tags.json') as f:
                 tags = json.loads(f.read())
@@ -180,15 +178,11 @@ class Gen2NodeProvider(NodeProvider):
 
         # cache of the nodes created, but not yet tagged
         self.pending_nodes = {}
-
-        # temporary needed deleted nodes cache as in some cases although node
-        # scheduled for delete it still returned by backend tag search service
         self.deleted_nodes = []
 
         self.cache_stopped_nodes = provider_config.get("cache_stopped_nodes",
                                                        True)
 
-    # because create + tag is not atomic returns node type based on node name
     def _get_node_type(self, name):
         if f"{self.cluster_name}-{WORKER}" in name:
             return WORKER
