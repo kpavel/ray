@@ -148,7 +148,7 @@ class Gen2NodeProvider(NodeProvider):
             with open('tags.json') as f:
                 tags = json.loads(f.read())
 
-                for instance_id, instance_tags in tags.iteritems():
+                for instance_id, instance_tags in tags.items():
                     try:
                         # this one is needed to filter out instances
                         # dissapeared since master was up
@@ -204,7 +204,7 @@ class Gen2NodeProvider(NodeProvider):
         with self.lock:
             tags = self.nodes_tags.copy()
 
-        for node_id, node_tags in tags.iteritems():
+        for node_id, node_tags in tags.items():
 
             # check if node scheduled for delete
             with self.lock:
