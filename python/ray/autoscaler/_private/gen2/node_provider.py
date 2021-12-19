@@ -340,7 +340,7 @@ class Gen2NodeProvider(NodeProvider):
         with self.lock:
             # update inmemory cache
             if node_id and tags:
-                self.nodes_tags.update({node_id: tags})
+                self.nodes_tags[node_id].update(tags)
 
             # dump inmemory cache to file
             with open('tags.json', 'w') as tags_file:
