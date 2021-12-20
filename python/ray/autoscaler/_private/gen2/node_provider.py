@@ -189,8 +189,8 @@ class Gen2NodeProvider(NodeProvider):
         nodes = []
 
         if not filters or list(filters.keys()) == [TAG_RAY_NODE_KIND]:
-            instances = self.ibm_vpc_client.list_instances().get_result()
-            for instance in instances:
+            result = self.ibm_vpc_client.list_instances().get_result()
+            for instance in result['instances']:
                 kind = self._get_node_type(instance['name'])
                 if kind:
                     if not filters or kind == filters[TAG_RAY_NODE_KIND]:
