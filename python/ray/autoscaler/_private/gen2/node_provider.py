@@ -195,6 +195,12 @@ class Gen2NodeProvider(NodeProvider):
                 if kind:
                     if not filters or kind == filters[TAG_RAY_NODE_KIND]:
                         nodes.append(instance)
+                        with self.lock:
+                            node_cache = self.nodes_tags.setdefault(
+                                instance['id'], {})
+                            node_cache.update({
+                                TAG_RAY_CLUSTER_NAME: self.cluster_name,
+                                TAG_RAY_NODE_KIND: kind})
         else:
             with self.lock:
                 tags = self.nodes_tags.copy()
