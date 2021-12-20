@@ -30,8 +30,8 @@ from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 from ibm_vpc import VpcV1
 from ray.autoscaler._private.cli_logger import cli_logger
 from ray.autoscaler.node_provider import NodeProvider
-from ray.autoscaler.tags import (TAG_RAY_CLUSTER_NAME, TAG_RAY_LAUNCH_CONFIG,
-                                 TAG_RAY_NODE_KIND, TAG_RAY_NODE_NAME)
+from ray.autoscaler.tags import (TAG_RAY_CLUSTER_NAME, NODE_KIND_HEAD,
+                    NODE_KIND_WORKER, TAG_RAY_NODE_KIND, TAG_RAY_NODE_NAME)
 
 logger = logging.getLogger(__name__)
 
@@ -43,11 +43,7 @@ PENDING_TIMEOUT = 120
 PROFILE_NAME_DEFAULT = "cx2-2x4"
 VOLUME_TIER_NAME_DEFAULT = "general-purpose"
 RAY_RECYCLABLE = "ray-recyclable"
-
 RETRIES = 10
-WORKER = "worker"
-HEAD = "head"
-
 
 def _create_vpc_client(endpoint, authenticator):
     """
@@ -183,43 +179,61 @@ class Gen2NodeProvider(NodeProvider):
                                                        True)
 
     def _get_node_type(self, name):
-        if f"{self.cluster_name}-{WORKER}" in name:
-            return WORKER
-        elif f"{self.cluster_name}-{HEAD}" in name:
-            return HEAD
+        if f"{self.cluster_name}-{NODE_KIND_WORKER}" in name:
+            return NODE_KIND_WORKER
+        elif f"{self.cluster_name}-{NODE_KIND_HEAD}" in name:
+            return NODE_KIND_HEAD
 
+    def _get_nodes_by_tags(self, filters):
+
+        nodes = []
+
+        if not filters or list(filters.keys()) == [TAG_RAY_NODE_KIND]:
+            instances = self.ibm_vpc_client.list_instances().get_result()
+            for instance in instances:
+                kind = self._get_node_type(instance['name'])
+                if kind:
+                    if not filters or kind == filters[TAG_RAY_NODE_KIND]:
+                        nodes.append(instance)
+        else:
+            with self.lock:
+                tags = self.nodes_tags.copy()
+
+                for node_id, node_tags in tags.items():
+
+                    # filter by tags
+                    if not all(item in node_tags.items() for item in filters.items()):
+                        logger.info(f"specified filter {filters} doesn't match node tags {node_tags}")
+                        continue
+                
+                    try:
+                        nodes.append(self.ibm_vpc_client.get_instance(node_id).result)
+                    except Exception as e:
+                        cli_logger.warning(node_id)
+                        if e.message == "Instance not found":
+                            logger.error(f"failed to find vsi {node_id}, skipping")
+                            continue
+                        logger.error(f"failed to find instance {node_id}, raising")
+                        raise e
+
+    """
+    Returns ids of non terminated nodes
+    """
     @log_in_out
     @retry_on_except
     def non_terminated_nodes(self, tag_filters):
 
         nodes = []
 
-        with self.lock:
-            tags = self.nodes_tags.copy()
+        found_nodes = self._get_nodes_by_tags(tag_filters)
 
-        for node_id, node_tags in tags.items():
+        for node in found_nodes:
 
             # check if node scheduled for delete
             with self.lock:
-                if node_id in self.deleted_nodes:
-                    logger.info(f"{node_id} scheduled for delete")
+                if node['id'] in self.deleted_nodes:
+                    logger.info(f"{node['id']} scheduled for delete")
                     continue
-
-            # filter by tags
-            if not all(item in node_tags.items() for item in tag_filters.items()):
-                logger.info(f"specified filter {tag_filters} doesn't match node tags {node_tags}")
-                continue
-        
-            node = None
-            try:
-                node = self.ibm_vpc_client.get_instance(node_id).result
-            except Exception as e:
-                cli_logger.warning(node_id)
-                if e.message == "Instance not found":
-                    logger.error(f"failed to find vsi {node_id}, skipping")
-                    continue
-                logger.error(f"failed to find instance {node_id}, raising")
-                raise e
 
             # validate instance in correct state
             valid_statuses = ["pending", "starting", "running"]
@@ -244,13 +258,13 @@ class Gen2NodeProvider(NodeProvider):
                     else:
                         self.pending_nodes.pop(node['id'], None)
 
-            if self._get_node_type(node["name"]) == "head":
+            if self._get_node_type(node["name"]) == NODE_KIND_HEAD:
                 nic_id = node["network_interfaces"][0]["id"]
 
                 # find head node external ip
                 res = self.ibm_vpc_client.\
                     list_instance_network_interface_floating_ips(
-                        node_id, nic_id).get_result()
+                        node['id'], nic_id).get_result()
 
                 floating_ips = res["floating_ips"]
                 if len(floating_ips) == 0:
@@ -283,13 +297,13 @@ class Gen2NodeProvider(NodeProvider):
     @log_in_out
     def node_tags(self, node_id):
         with self.lock:
-            return self.nodes_tags[node_id]
+            return self.nodes_tags.get(node_id, {})
 
     # return external ip for head and private ips for workers
     def _get_hybrid_ip(self, node_id):
         node = self._get_cached_node(node_id)
         node_type = self._get_node_type(node["name"])
-        if node_type == "head":
+        if node_type == NODE_KIND_HEAD:
             fip = node.get("floating_ips")
             if fip:
                 return fip[0]["address"]
@@ -517,7 +531,7 @@ class Gen2NodeProvider(NodeProvider):
         self.set_node_tags(instance['id'], tags)
 
         # currently always creating public ip for head node
-        if self._get_node_type(name) == "head":
+        if self._get_node_type(name) == NODE_KIND_HEAD:
             fip_data = self._create_floating_ip(base_config)
             self._attach_floating_ip(instance, fip_data)
 
