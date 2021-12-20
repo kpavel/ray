@@ -216,6 +216,8 @@ class Gen2NodeProvider(NodeProvider):
                         logger.error(f"failed to find instance {node_id}, raising")
                         raise e
 
+        return nodes
+
     """
     Returns ids of non terminated nodes
     """
