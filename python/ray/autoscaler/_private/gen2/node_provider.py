@@ -429,7 +429,8 @@ class Gen2NodeProvider(NodeProvider):
             "primary_network_interface"] = primary_network_interface
 
         try:
-            resp = self.ibm_vpc_client.create_instance(instance_prototype)
+            with self.lock:
+                resp = self.ibm_vpc_client.create_instance(instance_prototype)
         except ApiException as e:
             if e.code == 400 and "already exists" in e.message:
                 return self._get_instance_data(name)
