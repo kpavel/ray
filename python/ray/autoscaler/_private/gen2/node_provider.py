@@ -141,24 +141,23 @@ class Gen2NodeProvider(NodeProvider):
         ray_cache = Path(Path.home(), Path('.ray'))
         ray_cache.mkdir(exist_ok=True)
 
-        tags_file = Path(ray_cache, Path('tags.json'))
-        if tags_file.is_file():
-            with open('tags.json') as f:
-                tags = json.loads(f.read())
+        self.tags_file = Path(ray_cache, Path('tags.json'))
+        if self.tags_file.is_file():
+            tags = json.loads(self.tags_file.read_text())
 
-                for instance_id, instance_tags in tags.items():
-                    try:
-                        # this one is needed to filter out instances
-                        # dissapeared since master was up
-                        self.ibm_vpc_client.get_instance(instance_id)
-                        self.nodes_tags[instance_id] = instance_tags
-                    except Exception as e:
-                        cli_logger.warning(instance_id)
-                        if e.message == "Instance not found":
-                            logger.error(
-                                f"cached instance {instance_id} not found, \
-                                    will be removed from cache")                 
-                self.set_node_tags(None, None)
+            for instance_id, instance_tags in tags.items():
+                try:
+                    # this one is needed to filter out instances
+                    # dissapeared since master was up
+                    self.ibm_vpc_client.get_instance(instance_id)
+                    self.nodes_tags[instance_id] = instance_tags
+                except Exception as e:
+                    cli_logger.warning(instance_id)
+                    if e.message == "Instance not found":
+                        logger.error(
+                            f"cached instance {instance_id} not found, \
+                                will be removed from cache")                 
+            self.set_node_tags(None, None)
 
     def __init__(self, provider_config, cluster_name):
         NodeProvider.__init__(self, provider_config, cluster_name)
@@ -344,8 +343,7 @@ class Gen2NodeProvider(NodeProvider):
                 node_cache.update(tags)
 
             # dump inmemory cache to file
-            with open('tags.json', 'w') as tags_file:
-                tags_file.write(json.dumps(self.nodes_tags))
+            self.tags_file.write_text(json.dumps(self.nodes_tags))
 
     def _get_instance_data(self, name):
         """
