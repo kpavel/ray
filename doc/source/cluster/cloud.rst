@@ -151,7 +151,7 @@ Ray with cloud providers
 
     .. note:: The Aliyun Node Provider is community-maintained. It is maintained by its authors, not the Ray team.
 
-.. tabbed:: GCP
+.. tabbed:: IBM Cloud
 
     First, install ibm cloud client packages (``pip install ibm_vpc ibm_platform_services ibm_cloud_sdk_core``). Obtain API Key as described in `the docs <https://cloud.ibm.com/docs/account?topic=account-userapikey>`.
     
