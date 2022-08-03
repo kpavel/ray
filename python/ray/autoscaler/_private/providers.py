@@ -96,8 +96,8 @@ def _import_aliyun(provider_config):
 
 
 def _import_gen2(provider_config):
-    from ray.autoscaler._private.gen2.node_provider import \
-        Gen2NodeProvider
+    from ray.autoscaler._private.gen2.node_provider import Gen2NodeProvider
+
     return Gen2NodeProvider
 
 
@@ -147,6 +147,7 @@ def _load_aliyun_defaults_config():
 
 def _load_gen2_defaults_config():
     import ray.autoscaler.gen2 as gen2
+
     return os.path.join(os.path.dirname(gen2.__file__), "defaults.yaml")
 
 
@@ -167,7 +168,7 @@ _NODE_PROVIDERS = {
     "kuberay": _import_kuberay,
     "aliyun": _import_aliyun,
     "gen2": _import_gen2,
-    "external": _import_external  # Import an external module
+    "external": _import_external,  # Import an external module
 }
 
 _PROVIDER_PRETTY_NAMES = {
@@ -182,7 +183,7 @@ _PROVIDER_PRETTY_NAMES = {
     "kuberay": "Kuberay",
     "aliyun": "Aliyun",
     "gen2": "IBM Gen2",
-    "external": "External"
+    "external": "External",
 }
 
 _DEFAULT_CONFIGS = {
