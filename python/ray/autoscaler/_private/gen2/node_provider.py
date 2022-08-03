@@ -104,7 +104,8 @@ class Gen2NodeProvider(NodeProvider):
                     _self = args[0]
                     with _self.lock:
                         _self.ibm_vpc_client = _get_vpc_client(
-                            _self.endpoint, IAMAuthenticator(_self.iam_api_key)
+                            _self.endpoint,
+                            IAMAuthenticator(_self.iam_api_key, url=_self.iam_endpoint),
                         )
 
                     time.sleep(1)
@@ -208,9 +209,10 @@ class Gen2NodeProvider(NodeProvider):
         self.lock = threading.RLock()
         self.endpoint = self.provider_config["endpoint"]
         self.iam_api_key = self.provider_config["iam_api_key"]
+        self.iam_endpoint = self.provider_config.get("iam_endpoint")
 
         self.ibm_vpc_client = _get_vpc_client(
-            self.endpoint, IAMAuthenticator(self.iam_api_key)
+            self.endpoint, IAMAuthenticator(self.iam_api_key, url=self.iam_endpoint)
         )
 
         self._load_tags()
@@ -241,10 +243,10 @@ class Gen2NodeProvider(NodeProvider):
         if not filters or list(filters.keys()) == [TAG_RAY_NODE_KIND]:
             result = self.ibm_vpc_client.list_instances().get_result()
             instances = result["instances"]
-            while result["next"]:
+            while result.get("next"):
                 start = result["next"]["href"].split("start=")[1]
                 result = self.ibm_vpc_client.list_instances(start=start).get_result()
-                instances.append(result["instances"])
+                instances.extend(result["instances"])
 
             for instance in instances:
                 kind = self._get_node_type(instance["name"])
