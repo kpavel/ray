@@ -98,7 +98,8 @@ class Gen2NodeProvider(NodeProvider):
                     _self = args[0]
                     with _self.lock:
                         _self.ibm_vpc_client = _get_vpc_client(
-                            _self.endpoint, IAMAuthenticator(_self.iam_api_key))
+                            _self.endpoint, IAMAuthenticator(_self.iam_api_key)
+                        )
 
                     time.sleep(1)
 
