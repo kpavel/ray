@@ -69,16 +69,15 @@ class Gen2NodeProvider(NodeProvider):
     all necessary gen2 details including existing VPC id, VS image, security
     group...etc.
 
-    Easiest way to generate config file is to use `lithopscloud` config tool.
-    Install it using `pip install lithopscloud`, run it, choose `Ray Gen2` and
-    follow interactive wizard.
+    Most convinient way to generate config file is to use `lithopscloud` config
+    tool. Install it using `pip install lithopscloud`, run it, choose
+    `Ray Gen2` and follow interactive wizard.
 
     Currently, instance tagging is implemented using internal cache
 
-    To communicate with head node from outside cluster private network, using
-    provider `use_hybrid_ips` flag cluster head node may be provisioned
-    with floating (external) ip and the rest of worker nodes will be allocated
-    only private ips.
+    To communicate with head node from outside cluster private network,
+    `use_hybrid_ips` set to True. Then, floating (external) ip allocated to
+    cluster head node, while worker nodes are provisioned with private ips only.
     """
 
     """
@@ -99,7 +98,7 @@ class Gen2NodeProvider(NodeProvider):
                     cli_logger.error(msg)
                     logger.exception(msg)
 
-                    logger.info("reiniting clients and waiting few seconds")
+                    logger.debug("reiniting clients and waiting few seconds")
 
                     _self = args[0]
                     with _self.lock:
@@ -122,14 +121,14 @@ class Gen2NodeProvider(NodeProvider):
     def log_in_out(func):
         def decorated_func(*args, **kwargs):
             name = func.__name__
-            logger.info(
+            logger.debug(
                 f"Enter {name} from {inspect.stack()[0][3]} "
                 f"{inspect.stack()[1][3]} {inspect.stack()[2][3]} with args: "
                 f"{args} and kwargs {kwargs}"
             )
             try:
                 result = func(*args, **kwargs)
-                logger.info(
+                logger.debug(
                     f"Leave {name} from {inspect.stack()[1][3]} with result "
                     f"{result}, entered with args: {args}"
                 )
@@ -172,15 +171,15 @@ class Gen2NodeProvider(NodeProvider):
             # check if the current node is a head node
             name = socket.gethostname()
 
-            logger.info(f"Check if {name} is HEAD")
+            logger.debug(f"Check if {name} is HEAD")
             if self._get_node_type(name) == NODE_KIND_HEAD:
 
-                logger.info(f"{name} is HEAD")
+                logger.debug(f"{name} is HEAD")
                 node = self.ibm_vpc_client.list_instances(name=name).get_result()[
                     "instances"
                 ]
                 if node:
-                    logger.info(f"{name} is node {node} in vpc")
+                    logger.debug(f"{name} is node {node} in vpc")
 
                     ray_bootstrap_config = Path(
                         Path.home(), Path("ray_bootstrap_config.yaml")
@@ -200,7 +199,7 @@ class Gen2NodeProvider(NodeProvider):
                         "ray-file-mounts-contents": mounts_contents_hash,
                     }
 
-                    logger.info(f"Setting HEAD node tags {head_tags}")
+                    logger.debug(f"Setting HEAD node tags {head_tags}")
                     self.set_node_tags(node[0]["id"], head_tags)
 
     def __init__(self, provider_config, cluster_name):
@@ -319,7 +318,7 @@ class Gen2NodeProvider(NodeProvider):
                 if node["id"] in self.pending_nodes:
                     if node["status"] != "running":
                         pending_time = self.pending_nodes[node["id"]] - time.time()
-                        logger.info(f"{node['id']} is pending for {pending_time}")
+                        logger.debug(f"{node['id']} is pending for {pending_time}")
                         if pending_time > PENDING_TIMEOUT:
                             logger.error(
                                 f"pending timeout {PENDING_TIMEOUT} reached, "
@@ -419,7 +418,7 @@ class Gen2NodeProvider(NodeProvider):
         except Exception:
             node = self._get_node(node_id)
 
-        logger.info(f"in internal_ip, returning ip for node {node}")
+        logger.debug(f"in internal_ip, returning ip for node {node}")
 
         return node["network_interfaces"][0].get("primary_ipv4_address")
 
@@ -542,7 +541,7 @@ class Gen2NodeProvider(NodeProvider):
         fip = fip_data["address"]
         fip_id = fip_data["id"]
 
-        logger.info(
+        logger.debug(
             "Attaching floating IP {} to VM instance {}".format(fip, instance["id"])
         )
 
@@ -551,7 +550,7 @@ class Gen2NodeProvider(NodeProvider):
 
         if inst_p_nic["primary_ipv4_address"] and inst_p_nic["id"] == fip_id:
             # floating ip already attached. do nothing
-            logger.info("Floating IP {} already attached to eth0".format(fip))
+            logger.debug("Floating IP {} already attached to eth0".format(fip))
         else:
             # attach floating ip
             self.ibm_vpc_client.add_instance_network_interface_floating_ip(
@@ -659,7 +658,7 @@ class Gen2NodeProvider(NodeProvider):
         return all_created_nodes
 
     def _delete_node(self, node_id):
-        logger.info(f"in _delete_node with id {node_id}")
+        logger.debug(f"in _delete_node with id {node_id}")
         try:
             floating_ips = []
 
@@ -699,7 +698,7 @@ class Gen2NodeProvider(NodeProvider):
         futures = []
         with cf.ThreadPoolExecutor(len(node_ids)) as ex:
             for node_id in node_ids:
-                logger.info("NodeProvider: {}: Terminating node".format(node_id))
+                logger.debug("NodeProvider: {}: Terminating node".format(node_id))
                 futures.append(ex.submit(self.terminate_node, node_id))
 
         for future in cf.as_completed(futures):
