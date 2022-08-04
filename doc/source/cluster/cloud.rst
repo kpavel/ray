@@ -158,7 +158,7 @@ Ray with cloud providers
     Then, install interactive vpc config tool (``pip install lithopscloud``), and use it to prepare <CLUSTER_CONFIG_FILE>
     .. code-block:: bash
         
-        lithopscloud --iam-api-key <IAM_API_KEY> --output-file <CLUSTER_CONFIG_FILE>
+        lithopscloud --iam-api-key <IAM_API_KEY> --output-file <CLUSTER_CONFIG_FILE> --pr
 
         # Select `Ray Gen2` and then follow the interactive wizard
 

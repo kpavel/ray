@@ -70,8 +70,8 @@ class Gen2NodeProvider(NodeProvider):
     group...etc.
 
     Most convinient way to generate config file is to use `lithopscloud` config
-    tool. Install it using `pip install lithopscloud`, run it, choose
-    `Ray Gen2` and follow interactive wizard.
+    tool. Install it using `pip install lithopscloud`, run it with --pr flag,
+    choose `Ray Gen2` and follow interactive wizard.
 
     Currently, instance tagging is implemented using internal cache
 
